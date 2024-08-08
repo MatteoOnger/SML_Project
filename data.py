@@ -41,6 +41,10 @@ class DataSet():
         return self.data[self.label_col]
 
 
+    def has_labels(self) -> bool:
+        return self.label_col is not None
+
+
     def __getitem__(self, key :int|slice) -> 'DataSet':
         data = self.data[key]
         label_col = self.label_col if self.label_col in data.columns else None
