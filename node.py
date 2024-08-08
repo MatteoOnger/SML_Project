@@ -48,7 +48,7 @@ class BinNode():
             raise NotImplementedError("Method not implemented for {dt} features")
         
         try:
-            res = op(data.get_feature(self.test.feature), self.test.threshold)
+            res = op(data.get_feature_as_series(self.test.feature), self.test.threshold)
         except TypeError:
             raise TypeError("Mismatching types between feature and threshold") from None
         return res.to_numpy()
@@ -78,7 +78,7 @@ class BinNode():
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
         self.data = data
-        self.prediction = self.tree.prediction_criterion(data.get_labels())
+        self.prediction = self.tree.prediction_criterion(data.get_labels_as_series())
         return
 
 
