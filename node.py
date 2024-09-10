@@ -79,7 +79,7 @@ class BinNode():
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
         self.data = data
-        #self.prediction = self.tree.prediction_criterion(data.get_labels_as_series())
+        self.prediction = self.tree.prediction_criterion(data.get_labels_as_series())
         return
 
 
