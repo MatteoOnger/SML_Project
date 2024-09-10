@@ -18,6 +18,7 @@ class BinNode():
 
         self.isleaf = True
         self.tree = tree
+        self.depth = parent.depth + 1 if parent is not None else 0
 
         self.parent = parent
         self.sx = None
