@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from enum import Enum
@@ -19,7 +18,7 @@ class DataSet():
     """
     def __init__(self, data :pd.DataFrame, label_col :str|None=None) -> None:
         if label_col is not None and label_col not in data.columns:
-            raise ValueError(f"'{label_col}' is not a column of 'data'")
+            raise ValueError(f"'{label_col}' is not a column of <data>")
 
         self.data = data
         self.index = data.index

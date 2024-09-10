@@ -32,18 +32,18 @@ class BinNode():
 
     def check_test(self, data :DataSet) -> np.ndarray:
         if self.test is None:
-            raise InvalidOperationError("No test associated with theis node")
+            raise InvalidOperationError("No test associated with this node")
         if self.test.feature not in data.schema.features:
-            raise ValueError("Dataset doesn't have feature {self.test.feat_idx}-th")
+            raise ValueError("Dataset doesn't have feature {self.test.feature}")
 
         op :callable
         res :pd.Series
         dt = data.schema.get_type(self.test.feature)
 
         if dt == DataType.CATEGORICAL:
-            op = pd.Series.__eq__
+            op = pd.Series.__ne__
         elif dt == DataType.NUMERICAL:
-            op = pd.Series.__le__
+            op = pd.Series.__lt__
         else:
             raise NotImplementedError("Method not implemented for {dt} features")
         
@@ -67,9 +67,10 @@ class BinNode():
         if self.isleaf:
             pred = pd.Series([self.prediction] * len(data), index=data.index)
         else:
-            res = self.check_test(self.points)
-            sx_pred = self.sx.predict(self.data[res])
-            dx_pred = self.dx.predict(self.data[[not i for i in res]])
+            res = self.check_test(data)
+            print(res)
+            sx_pred = self.sx.predict(data[res])
+            dx_pred = self.dx.predict(data[[not i for i in res]])
             pred = pd.concat([sx_pred, dx_pred]).sort_index()
         return pred
 
@@ -78,7 +79,7 @@ class BinNode():
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
         self.data = data
-        self.prediction = self.tree.prediction_criterion(data.get_labels_as_series())
+        #self.prediction = self.tree.prediction_criterion(data.get_labels_as_series())
         return
 
 
@@ -93,15 +94,15 @@ class BinNode():
         
         self.isleaf = False
         self.set_test(feat, threshold)
-        res = self.check_test(self.points)
+        res = self.check_test(self.data)
 
-        self.sx = BinNode(self, self.tree, self.id + 1)
-        self.dx = BinNode(self, self.tree, self.id + 2)
+        self.sx = BinNode(self, self.tree, 2 * self.id + 1)
+        self.dx = BinNode(self, self.tree, 2 * self.id + 2)
 
         self.sx.set_data(self.data[res])
         self.dx.set_data(self.data[[not i for i in res]])
         
-        self.points = None
+        self.data = None
         self.prediction = None
         return
 
