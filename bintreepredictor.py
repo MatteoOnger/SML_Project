@@ -1,12 +1,11 @@
 import numpy as np
 import pandas as pd
 
-import treepredictor as tp
-
 from dataclasses import dataclass
-from typing import Any
+from math import log2
+from typing import Any, Literal, Tuple
 
-from data import DataType, DataSet
+from data import DataSet, DataType
 from errors import InvalidOperationError
 
 
@@ -14,7 +13,7 @@ from errors import InvalidOperationError
 class BinNode():
     """
     """
-    def __init__(self, parent :'BinNode|None'=None, tree :tp.BinTreePredictor|None=None, id :int=0) -> None:
+    def __init__(self, parent :'BinNode|None'=None, tree :'BinTreePredictor|None'=None, id :int=0) -> None:
         self.id = id
 
         self.isleaf = True
@@ -128,3 +127,84 @@ class BinNode():
     class TestCondition():
         feature :int|str
         threshold :Any
+
+
+
+class BinTreePredictor():
+    """
+    """
+    PREDICTION_CRITERION = {
+        "mode": lambda y: y.mode()[0],
+    }
+
+
+    SPLIT_CRITERION = {
+        "entropy": lambda y, t: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / log2(t),
+        "gini": lambda y, t: (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / (1 - 1/t),
+        "misclass": None,
+    }
+
+
+    #TODO: struct risk min
+    STOP_CRITERION = {
+        "max_nodes": lambda tree, n: tree.num_nodes > n,
+        "max_height": lambda tree, h: tree.height > h,
+    }
+
+
+    def __init__(
+            self,
+            prediction_criterion :Literal['mode'],
+            split_criterion :Literal['entropy', 'gini'],
+            stop_criterion :Literal['max_nodes', 'max_height'],
+            stop_criterion_threshold :int,
+            id :int=0
+        ) -> None:
+        self.id = id
+
+        self.split_criterion_name = split_criterion
+        self.prediction_criterion_name = prediction_criterion
+        self.stop_criterion_name = stop_criterion
+
+        self.split_criterion = BinTreePredictor.SPLIT_CRITERION[split_criterion]
+        self.prediction_criterion = BinTreePredictor.PREDICTION_CRITERION[prediction_criterion]
+        self.stop_criterion =  BinTreePredictor.STOP_CRITERION[stop_criterion]
+        self.stop_threshold = stop_criterion_threshold
+
+        self.num_nodes = 0
+        self.height = 0
+
+        self.root = None
+        self.leaves = list()
+        return
+
+
+    def fit(self, data :DataSet) -> float:
+        while not self.stop_criterion(self, self.stop_threshold):
+            if self.root == None:
+                root = BinNode(parent=None, tree=self)
+                root.set_data(data)
+
+                self.root = root
+                self.leaves.append(root)
+
+                self.num_nodes += 1
+                self.height = 1
+            else:
+                for leaf in self.leaves:
+                    for feat in data.schema.features:
+                        for value in data.schema.get_feature_domain(feat):
+                            print(leaf, feat, value)
+                
+                self.num_nodes += 1
+                #self.height = 1
+        return
+
+
+    def predict(self, data :DataSet) -> Tuple[DataSet, float|None]:
+        if self.root is None:
+            raise InvalidOperationError("This method cannot be called on an untrained predictor")
+        
+        predictions = self.root.predict(data)
+        accuracy = (predictions == data.get_labels_as_series()).sum() / len(data) if data.schema.has_labels() else None
+        return predictions, accuracy
