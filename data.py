@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from enum import Enum
@@ -40,10 +41,6 @@ class DataSet():
         return self.data[self.label_col]
 
 
-    def has_labels(self) -> bool:
-        return self.label_col is not None
-
-
     def __getitem__(self, key :int|slice) -> 'DataSet':
         data = self.data[key]
         label_col = self.label_col if self.label_col in data.columns else None
@@ -63,9 +60,23 @@ class DataSet():
         """
         def __init__(self, ds :'DataSet') -> None:
             self.ds = ds
+
             self.features = ds.data.columns.drop(self.ds.label_col) if self.ds.label_col is not None else ds.data.columns
+            self.num_features = len(self.features)
             return
+
+
+        def get_label_domain(self) -> np.ndarray:
+            return self.ds.get_labels_as_series().unique()
+
+
+        def get_feature_domain(self, col :int|str) -> np.ndarray:
+            return self.ds.get_feature_as_series(col).unique()
 
 
         def get_type(self, col :int|str) -> DataType:
             return DataType.CATEGORICAL if self.ds.data.loc[:, col].dtype ==  object else DataType.NUMERICAL
+        
+
+        def has_labels(self) -> bool:
+            return self.ds.label_col is not None

@@ -1,19 +1,20 @@
 import numpy as np
 import pandas as pd
 
+import treepredictor as tp
+
 from dataclasses import dataclass
 from typing import Any
 
 from data import DataType, DataSet
 from errors import InvalidOperationError
-from treepredictor import BinTreePredictor
 
 
 
 class BinNode():
     """
     """
-    def __init__(self, parent :'BinNode|None'=None, tree :BinTreePredictor|None=None, id :int=0) -> None:
+    def __init__(self, parent :'BinNode|None'=None, tree :tp.BinTreePredictor|None=None, id :int=0) -> None:
         self.id = id
 
         self.isleaf = True
