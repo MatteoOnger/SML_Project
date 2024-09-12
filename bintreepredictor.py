@@ -160,7 +160,6 @@ class BinTreePredictor():
     }
 
 
-    #TODO: struct risk min
     STOP_CRITERION = {
         "max_nodes": lambda tree, n: tree.num_nodes > n,
         "max_height": lambda tree, h: tree.height > h,
@@ -195,48 +194,47 @@ class BinTreePredictor():
 
 
     def fit(self, data :DataSet) -> float:
+        root = BinNode(parent=None, tree=self)
+        root.set_data(data)
+
+        self.root = root
+        self.leaves.append(root)
+
+        self.num_nodes = 1
+        self.height = 1
+
         while not self.stop_criterion(self, self.stop_threshold):
-            if self.root == None:
-                root = BinNode(parent=None, tree=self)
-                root.set_data(data)
+            best_leaf = None
+            best_loss = float("inf")
+            best_feat, best_value = None, None
+            
+            for leaf in self.leaves:
+                if leaf.is_pure():
+                    continue
 
-                self.root = root
-                self.leaves.append(root)
+                for feat in data.schema.features:
+                    for value in data.schema.get_feature_domain(feat):
+                        leaf.set_test(feat, value)
+                        res = leaf.check_test(leaf.data)
 
-                self.num_nodes += 1
-                self.height = 1
-            else:
-                best_leaf, best_feat, best_value, best_loss = None, None, None, float("inf")
+                        data_sx = leaf.data[res]
+                        data_dx = leaf.data[[not i for i in res]]
+                        
+                        if len(data_sx) == 0 or len(data_dx) == 0:
+                            continue
 
-                for leaf in self.leaves:
-                
-                    if leaf.is_pure():
-                        continue
-                
-                    for feat in data.schema.features:
-                        for value in data.schema.get_feature_domain(feat):
-                            leaf.set_test(feat, value)
-                            res = leaf.check_test(leaf.data)
+                        loss_sx = self.split_criterion(data_sx.get_labels_as_series(), len(data_sx))
+                        loss_dx = self.split_criterion(data_dx.get_labels_as_series(), len(data_dx))
+                        loss = (loss_sx * len(data_sx) + loss_dx * len(data_dx)) / len(leaf.data)
 
-                            data_sx = leaf.data[res]
-                            data_dx = leaf.data[[not i for i in res]]
-                            
-                            if len(data_sx) == 0 or len(data_dx) == 0:
-                                continue
+                        if loss < best_loss:
+                            best_leaf = leaf
+                            best_loss = loss
+                            best_feat, best_value = feat, value
+                        
+                        leaf.drop_test()
 
-                            loss_sx = self.split_criterion(data_sx.get_labels_as_series(), len(data_sx))
-                            loss_dx = self.split_criterion(data_dx.get_labels_as_series(), len(data_dx))
-
-                            loss = (loss_sx * len(data_sx) + loss_dx * len(data_dx)) / len(leaf.data)
-
-                            if loss < best_loss:
-                                best_leaf = leaf
-                                best_feat = feat
-                                best_value = value
-                                best_loss = loss
-                            
-                            leaf.drop_test()
-
+            if best_loss < float("inf"):
                 best_leaf.split_node(best_feat, best_value)
 
                 self.leaves.remove(best_leaf)
