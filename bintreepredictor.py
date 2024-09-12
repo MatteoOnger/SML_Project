@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 
@@ -7,6 +8,10 @@ from typing import Any, Literal, Tuple
 
 from data import DataSet, DataType
 from errors import InvalidOperationError
+
+
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -27,6 +32,7 @@ class BinNode():
         self.test = None
 
         self.data = None
+        self.ispure = None
         self.prediction = None
         return
 
@@ -57,21 +63,13 @@ class BinNode():
 
     def drop_data(self) -> None:
         self.data = None
+        self.ispure = None
         return
 
 
     def drop_test(self) -> None:
         self.test = None
         return
-
-
-    def is_pure(self) -> bool:
-        if not self.isleaf:
-            raise InvalidOperationError("Inner nodes can NOT contain datapoints")
-        if self.data is None:
-            raise InvalidOperationError("No data assigned to this leaf")
-        labels = self.data.get_labels_as_series().to_numpy()
-        return (labels[0] == labels).all()
 
 
     def predict(self, data :DataSet) -> pd.Series:
@@ -83,7 +81,6 @@ class BinNode():
             pred = pd.Series([self.prediction] * len(data), index=data.index)
         else:
             res = self.check_test(data)
-            print(res)
             sx_pred = self.sx.predict(data[res])
             dx_pred = self.dx.predict(data[[not i for i in res]])
             pred = pd.concat([sx_pred, dx_pred]).sort_index()
@@ -93,8 +90,10 @@ class BinNode():
     def set_data(self, data :DataSet) -> None:
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
+        labels = data.get_labels_as_series() 
         self.data = data
-        self.prediction = self.tree.prediction_criterion(data.get_labels_as_series()) if self.tree is not None else None
+        self.ispure = (labels == labels.iloc[0]).all()
+        self.prediction = self.tree.prediction_criterion(labels) if self.tree is not None else None
         return
 
 
@@ -134,6 +133,7 @@ class BinNode():
             "test": None if self.test is None else f"({self.test.feature}, {self.test.threshold})",
             "prediction": self.prediction,
             "has_data": self.data is not None,
+            "is_pure": self.ispure
         }
         return "node -> " + str(s)
 
@@ -235,6 +235,8 @@ class BinTreePredictor():
                         leaf.drop_test()
 
             if best_loss < float("inf"):
+                logger.info(f"best split - leaf:{best_leaf.id} - feat:{best_feat} - threshold:{best_value}")
+
                 best_leaf.split_node(best_feat, best_value)
 
                 self.leaves.remove(best_leaf)
