@@ -42,9 +42,9 @@ class BinNode():
         dt = data.schema.get_type(self.test.feature)
 
         if dt == DataType.CATEGORICAL:
-            op = pd.Series.__ne__
+            op = pd.Series.__eq__
         elif dt == DataType.NUMERICAL:
-            op = pd.Series.__lt__
+            op = pd.Series.__le__
         else:
             raise NotImplementedError("Method not implemented for {dt} features")
         
@@ -58,6 +58,20 @@ class BinNode():
     def drop_data(self) -> None:
         self.data = None
         return
+
+
+    def drop_test(self) -> None:
+        self.test = None
+        return
+
+
+    def is_pure(self) -> bool:
+        if not self.isleaf:
+            raise InvalidOperationError("Inner nodes can NOT contain datapoints")
+        if self.data is None:
+            raise InvalidOperationError("No data assigned to this leaf")
+        labels = self.data.get_labels_as_series().to_numpy()
+        return (labels[0] == labels).all()
 
 
     def predict(self, data :DataSet) -> pd.Series:
@@ -80,7 +94,7 @@ class BinNode():
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
         self.data = data
-        self.prediction = self.tree.prediction_criterion(data.get_labels_as_series())
+        self.prediction = self.tree.prediction_criterion(data.get_labels_as_series()) if self.tree is not None else None
         return
 
 
@@ -113,12 +127,13 @@ class BinNode():
             "id": self.id,
             "type": "leaf" if self.isleaf else "inner",
             "tree_id":  None if self.tree is None else self.tree.id,
+            "depth": self.depth,
             "parent_id": None if self.parent is None else self.parent.id,
             "sx_id": None if self.sx is None else self.sx.id,
             "dx_id": None if self.dx is None else self.dx.id,
             "test": None if self.test is None else f"({self.test.feature}, {self.test.threshold})",
             "prediction": self.prediction,
-            "has_data": self.data is not None
+            "has_data": self.data is not None,
         }
         return "node -> " + str(s)
 
@@ -139,8 +154,8 @@ class BinTreePredictor():
 
 
     SPLIT_CRITERION = {
-        "entropy": lambda y, t: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / log2(t),
-        "gini": lambda y, t: (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / (1 - 1/t),
+        "entropy": lambda y, t: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / max(log2(t), 1),
+        "gini": lambda y, t: (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / (max(t-1, 1) / t),
         "misclass": None,
     }
 
@@ -162,20 +177,20 @@ class BinTreePredictor():
         ) -> None:
         self.id = id
 
-        self.split_criterion_name = split_criterion
         self.prediction_criterion_name = prediction_criterion
+        self.split_criterion_name = split_criterion
         self.stop_criterion_name = stop_criterion
 
-        self.split_criterion = BinTreePredictor.SPLIT_CRITERION[split_criterion]
         self.prediction_criterion = BinTreePredictor.PREDICTION_CRITERION[prediction_criterion]
+        self.split_criterion = BinTreePredictor.SPLIT_CRITERION[split_criterion]
         self.stop_criterion =  BinTreePredictor.STOP_CRITERION[stop_criterion]
         self.stop_threshold = stop_criterion_threshold
 
         self.num_nodes = 0
         self.height = 0
 
-        self.root = None
-        self.leaves = list()
+        self.root :BinNode = None
+        self.leaves :list[BinNode] = list()
         return
 
 
@@ -191,20 +206,65 @@ class BinTreePredictor():
                 self.num_nodes += 1
                 self.height = 1
             else:
+                best_leaf, best_feat, best_value, best_loss = None, None, None, float("inf")
+
                 for leaf in self.leaves:
+                
+                    if leaf.is_pure():
+                        continue
+                
                     for feat in data.schema.features:
                         for value in data.schema.get_feature_domain(feat):
-                            print(leaf, feat, value)
-                
-                self.num_nodes += 1
-                #self.height = 1
+                            leaf.set_test(feat, value)
+                            res = leaf.check_test(leaf.data)
+
+                            data_sx = leaf.data[res]
+                            data_dx = leaf.data[[not i for i in res]]
+                            
+                            if len(data_sx) == 0 or len(data_dx) == 0:
+                                continue
+
+                            loss_sx = self.split_criterion(data_sx.get_labels_as_series(), len(data_sx))
+                            loss_dx = self.split_criterion(data_dx.get_labels_as_series(), len(data_dx))
+
+                            loss = (loss_sx * len(data_sx) + loss_dx * len(data_dx)) / len(leaf.data)
+
+                            if loss < best_loss:
+                                best_leaf = leaf
+                                best_feat = feat
+                                best_value = value
+                                best_loss = loss
+                            
+                            leaf.drop_test()
+
+                best_leaf.split_node(best_feat, best_value)
+
+                self.leaves.remove(best_leaf)
+                self.leaves.append(best_leaf.sx)
+                self.leaves.append(best_leaf.dx)
+
+                self.num_nodes += 2
+                self.height = max(self.height, best_leaf.sx.depth+1)
         return
 
 
     def predict(self, data :DataSet) -> Tuple[DataSet, float|None]:
         if self.root is None:
             raise InvalidOperationError("This method cannot be called on an untrained predictor")
-        
         predictions = self.root.predict(data)
         accuracy = (predictions == data.get_labels_as_series()).sum() / len(data) if data.schema.has_labels() else None
         return predictions, accuracy
+
+
+    def __str__(self) -> str:
+        s = {
+            "id": self.id,
+            "prediction_criterion": self.prediction_criterion_name,
+            "split_criterion": self.split_criterion_name,
+            "stop_criterion": f"({self.stop_criterion_name}, {self.stop_threshold})",
+            "num_nodes": self.num_nodes,
+            "height": self.height,
+            "root": self.root.id,
+            "leaves": [leaf.id for leaf in self.leaves]
+        }
+        return "tree -> " + str(s)
