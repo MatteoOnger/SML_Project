@@ -92,7 +92,7 @@ class BinNode():
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
         labels = data.get_labels_as_series() 
         self.data = data
-        self.ispure = (labels == labels.iloc[0]).all()
+        self.ispure = bool((labels == labels.iloc[0]).all())
         self.prediction = self.tree.prediction_criterion(labels) if self.tree is not None else None
         return
 
@@ -172,6 +172,8 @@ class BinTreePredictor():
             split_criterion :Literal['entropy', 'gini'],
             stop_criterion :Literal['max_nodes', 'max_height'],
             stop_criterion_threshold :int,
+            max_num_feat :int=None,
+            max_num_vals :int=None,
             id :int=0
         ) -> None:
         self.id = id
@@ -184,6 +186,9 @@ class BinTreePredictor():
         self.split_criterion = BinTreePredictor.SPLIT_CRITERION[split_criterion]
         self.stop_criterion =  BinTreePredictor.STOP_CRITERION[stop_criterion]
         self.stop_threshold = stop_criterion_threshold
+        
+        self.max_num_feat = max_num_feat
+        self.max_num_vals = max_num_vals
 
         self.num_nodes = 0
         self.height = 0
@@ -209,11 +214,11 @@ class BinTreePredictor():
             best_feat, best_value = None, None
             
             for leaf in self.leaves:
-                if leaf.is_pure():
+                if leaf.ispure:
                     continue
 
-                for feat in data.schema.features:
-                    for value in data.schema.get_feature_domain(feat):
+                for feat in leaf.data.schema.features:
+                    for value in leaf.data.schema.get_feature_domain(feat):
                         leaf.set_test(feat, value)
                         res = leaf.check_test(leaf.data)
 
@@ -235,7 +240,7 @@ class BinTreePredictor():
                         leaf.drop_test()
 
             if best_loss < float("inf"):
-                logger.info(f"best split - leaf:{best_leaf.id} - feat:{best_feat} - threshold:{best_value}")
+                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{best_value})")
 
                 best_leaf.split_node(best_feat, best_value)
 
@@ -245,6 +250,9 @@ class BinTreePredictor():
 
                 self.num_nodes += 2
                 self.height = max(self.height, best_leaf.sx.depth+1)
+            else:
+                logger.info(f"BinTreePredictor_id:{self.id} - no split found")
+                break
         return
 
 
