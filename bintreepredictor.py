@@ -117,6 +117,7 @@ class BinNode():
         self.dx.set_data(self.data[[not i for i in res]])
         
         self.data = None
+        self.ispure = None
         self.prediction = None
         return
 
@@ -172,8 +173,8 @@ class BinTreePredictor():
             split_criterion :Literal['entropy', 'gini'],
             stop_criterion :Literal['max_nodes', 'max_height'],
             stop_criterion_threshold :int,
-            max_num_feat :int=None,
-            max_num_vals :int=None,
+            max_features :int=None,
+            max_thresholds :int=None,
             id :int=0
         ) -> None:
         self.id = id
@@ -187,8 +188,8 @@ class BinTreePredictor():
         self.stop_criterion =  BinTreePredictor.STOP_CRITERION[stop_criterion]
         self.stop_threshold = stop_criterion_threshold
         
-        self.max_num_feat = max_num_feat
-        self.max_num_vals = max_num_vals
+        self.max_features = max_features
+        self.max_thresholds = max_thresholds
 
         self.num_nodes = 0
         self.height = 0
@@ -211,15 +212,30 @@ class BinTreePredictor():
         while not self.stop_criterion(self, self.stop_threshold):
             best_leaf = None
             best_loss = float("inf")
-            best_feat, best_value = None, None
-            
+            best_feat, best_threshold = None, None
+
             for leaf in self.leaves:
                 if leaf.ispure:
                     continue
 
-                for feat in leaf.data.schema.features:
-                    for value in leaf.data.schema.get_feature_domain(feat):
-                        leaf.set_test(feat, value)
+                features = leaf.data.schema.features.to_numpy()
+                if self.max_features is not None:
+                    np.random.shuffle(features)
+                    features = features[:self.max_features]
+
+                for feat in features:
+                    thresholds :np.ndarray
+                    if self.max_thresholds is not None and leaf.data.schema.get_type(feat) == DataType.NUMERICAL:
+                        _, thresholds = pd.cut(leaf.data.get_feature_as_series(feat), bins=self.max_thresholds + 1, retbins=True)
+                        thresholds = thresholds[1:-1]
+                    else:
+                        thresholds = leaf.data.schema.get_feature_domain(feat)
+                    
+                    if len(thresholds) <= 1:
+                        continue 
+
+                    for threshold in thresholds:
+                        leaf.set_test(feat, threshold)
                         res = leaf.check_test(leaf.data)
 
                         data_sx = leaf.data[res]
@@ -235,14 +251,14 @@ class BinTreePredictor():
                         if loss < best_loss:
                             best_leaf = leaf
                             best_loss = loss
-                            best_feat, best_value = feat, value
+                            best_feat, best_threshold = feat, threshold
                         
                         leaf.drop_test()
 
             if best_loss < float("inf"):
-                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{best_value})")
+                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{best_threshold}) - loss:{best_loss}")
 
-                best_leaf.split_node(best_feat, best_value)
+                best_leaf.split_node(best_feat, best_threshold)
 
                 self.leaves.remove(best_leaf)
                 self.leaves.append(best_leaf.sx)
@@ -264,6 +280,23 @@ class BinTreePredictor():
         return predictions, accuracy
 
 
+    def print_tree(self, node :BinNode=None) -> None:
+        if node is None:
+            node = self.root
+            print(node)
+        
+        if node.sx is not None:
+            print(node.sx)
+        if node.dx is not None:
+            print(node.dx)
+        
+        if node.sx is not None:
+            self.print_tree(node.sx)
+        if node.dx is not None:
+            self.print_tree(node.dx)
+        return
+
+
     def __str__(self) -> str:
         s = {
             "id": self.id,
@@ -272,6 +305,8 @@ class BinTreePredictor():
             "stop_criterion": f"({self.stop_criterion_name}, {self.stop_threshold})",
             "num_nodes": self.num_nodes,
             "height": self.height,
+            "max_features": self.max_features,
+            "max_thresholds": self.max_thresholds,
             "root": self.root.id,
             "leaves": [leaf.id for leaf in self.leaves]
         }
