@@ -280,20 +280,26 @@ class BinTreePredictor():
         return predictions, accuracy
 
 
-    def print_tree(self, node :BinNode=None) -> None:
-        if node is None:
-            node = self.root
-            print(node)
+    def print_tree(self) -> None:
+        print(f"\n---- TREE ----\n{self}\n")
+
+        if self.root is not None:
+            print(self.root)
+
+        def rec(node :BinNode) -> None:
+            if node.sx is not None:
+                print(node.sx)
+            if node.dx is not None:
+                print(node.dx)
+            
+            if node.sx is not None:
+                rec(node.sx)
+            if node.dx is not None:
+                rec(node.dx)
+                return
         
-        if node.sx is not None:
-            print(node.sx)
-        if node.dx is not None:
-            print(node.dx)
-        
-        if node.sx is not None:
-            self.print_tree(node.sx)
-        if node.dx is not None:
-            self.print_tree(node.dx)
+        rec(self.root)
+        print("---- ---- ----")
         return
 
 
