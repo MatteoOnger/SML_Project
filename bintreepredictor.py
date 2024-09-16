@@ -157,7 +157,7 @@ class BinTreePredictor():
     SPLIT_CRITERION = {
         "entropy": lambda y, t: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / max(log2(t), 1),
         "gini": lambda y, t: (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / (max(t-1, 1) / t),
-        "misclass": None,
+        "misclass": lambda y, t: 1 - y.value_counts(normalize=True).max(),
     }
 
 
@@ -170,7 +170,7 @@ class BinTreePredictor():
     def __init__(
             self,
             prediction_criterion :Literal['mode'],
-            split_criterion :Literal['entropy', 'gini'],
+            split_criterion :Literal['entropy', 'gini', 'misclass'],
             stop_criterion :Literal['max_nodes', 'max_height'],
             stop_criterion_threshold :int,
             max_features :int=None,
