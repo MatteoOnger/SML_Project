@@ -133,7 +133,7 @@ class BinNode():
             "dx_id": None if self.dx is None else self.dx.id,
             "test": None if self.test is None else f"({self.test.feature}, {self.test.threshold})",
             "prediction": self.prediction,
-            "has_data": self.data is not None,
+            "has_data": len(self.data) if self.data is not None else None,
             "is_pure": self.ispure
         }
         return "node -> " + str(s)
@@ -241,6 +241,7 @@ class BinTreePredictor():
                         data_sx = leaf.data[res]
                         data_dx = leaf.data[[not i for i in res]]
                         
+                        leaf.drop_test()
                         if len(data_sx) == 0 or len(data_dx) == 0:
                             continue
 
@@ -253,8 +254,6 @@ class BinTreePredictor():
                             best_loss = loss
                             best_feat, best_threshold = feat, threshold
                         
-                        leaf.drop_test()
-
             if best_loss < float("inf"):
                 logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{best_threshold}) - loss:{best_loss}")
 
@@ -267,7 +266,10 @@ class BinTreePredictor():
                 self.num_nodes += 2
                 self.height = max(self.height, best_leaf.sx.depth+1)
             else:
-                logger.info(f"BinTreePredictor_id:{self.id} - no split found")
+                loss = 0
+                for leaf in self.leaves:
+                    loss += (self.split_criterion(leaf.data.get_labels_as_series(), len(leaf.data)) * len(leaf.data) / len(data))
+                logger.info(f"BinTreePredictor_id:{self.id} - no split found - loss:{loss}")
                 break
         return
 
