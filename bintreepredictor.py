@@ -269,7 +269,7 @@ class BinTreePredictor():
                 loss = 0
                 for leaf in self.leaves:
                     loss += (self.split_criterion(leaf.data.get_labels_as_series(), len(leaf.data)) * len(leaf.data) / len(data))
-                logger.info(f"BinTreePredictor_id:{self.id} - no split found - loss:{loss}")
+                logger.info(f"BinTreePredictor_id:{self.id} - no split found - final loss:{loss}")
                 break
         return
 
