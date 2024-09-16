@@ -8,7 +8,7 @@ from typing import Any, Literal, Tuple
 
 from data import DataSet, DataType
 from errors import InvalidOperationError
-from utils import round_if
+from utils import round_wrp
 
 
 
@@ -132,7 +132,7 @@ class BinNode():
             "parent_id": None if self.parent is None else self.parent.id,
             "sx_id": None if self.sx is None else self.sx.id,
             "dx_id": None if self.dx is None else self.dx.id,
-            "test": None if self.test is None else f"({self.test.feature}, {round_if(self.test.threshold, 4)})",
+            "test": None if self.test is None else f"({self.test.feature}, {round_wrp(self.test.threshold, 4)})",
             "prediction": self.prediction,
             "has_data": len(self.data) if self.data is not None else None,
             "is_pure": self.ispure
@@ -256,7 +256,7 @@ class BinTreePredictor():
                             best_feat, best_threshold = feat, threshold
                         
             if best_loss < float("inf"):
-                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_if(best_threshold, 4)}) - loss:{round(best_loss, 4)}")
+                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)}) - loss:{round_wrp(best_loss, 4)}")
 
                 best_leaf.split_node(best_feat, best_threshold)
 
@@ -270,7 +270,7 @@ class BinTreePredictor():
                 loss = 0
                 for leaf in self.leaves:
                     loss += (self.split_criterion(leaf.data.get_labels_as_series(), len(leaf.data)) * len(leaf.data) / len(data))
-                logger.info(f"BinTreePredictor_id:{self.id} - no split found - final loss:{round(loss, 4)}")
+                logger.info(f"BinTreePredictor_id:{self.id} - no split found - final loss:{round_wrp(loss, 4)}")
                 break
         return
 
