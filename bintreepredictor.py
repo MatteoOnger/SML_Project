@@ -8,6 +8,7 @@ from typing import Any, Literal, Tuple
 
 from data import DataSet, DataType
 from errors import InvalidOperationError
+from utils import round_if
 
 
 
@@ -41,7 +42,7 @@ class BinNode():
         if self.test is None:
             raise InvalidOperationError("No test associated with this node")
         if self.test.feature not in data.schema.features:
-            raise ValueError("Dataset doesn't have feature {self.test.feature}")
+            raise ValueError(f"Dataset doesn't have feature {self.test.feature}")
 
         op :callable
         res :pd.Series
@@ -52,7 +53,7 @@ class BinNode():
         elif dt == DataType.NUMERICAL:
             op = pd.Series.__le__
         else:
-            raise NotImplementedError("Method not implemented for {dt} features")
+            raise NotImplementedError(f"Method not implemented for {dt} features")
         
         try:
             res = op(data.get_feature_as_series(self.test.feature), self.test.threshold)
@@ -131,7 +132,7 @@ class BinNode():
             "parent_id": None if self.parent is None else self.parent.id,
             "sx_id": None if self.sx is None else self.sx.id,
             "dx_id": None if self.dx is None else self.dx.id,
-            "test": None if self.test is None else f"({self.test.feature}, {self.test.threshold})",
+            "test": None if self.test is None else f"({self.test.feature}, {round_if(self.test.threshold, 4)})",
             "prediction": self.prediction,
             "has_data": len(self.data) if self.data is not None else None,
             "is_pure": self.ispure
@@ -255,7 +256,7 @@ class BinTreePredictor():
                             best_feat, best_threshold = feat, threshold
                         
             if best_loss < float("inf"):
-                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{best_threshold}) - loss:{best_loss}")
+                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_if(best_threshold, 4)}) - loss:{round(best_loss, 4)}")
 
                 best_leaf.split_node(best_feat, best_threshold)
 
@@ -269,7 +270,7 @@ class BinTreePredictor():
                 loss = 0
                 for leaf in self.leaves:
                     loss += (self.split_criterion(leaf.data.get_labels_as_series(), len(leaf.data)) * len(leaf.data) / len(data))
-                logger.info(f"BinTreePredictor_id:{self.id} - no split found - final loss:{loss}")
+                logger.info(f"BinTreePredictor_id:{self.id} - no split found - final loss:{round(loss, 4)}")
                 break
         return
 
