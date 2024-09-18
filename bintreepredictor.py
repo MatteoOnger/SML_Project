@@ -269,6 +269,12 @@ class BinTreePredictor():
             else:
                 logger.info(f"BinTreePredictor_id:{self.id} - no split found")
                 break
+        
+        accuracy = 0
+        for leaf in self.leaves:
+            accuracy += (leaf.prediction == leaf.data.get_labels_as_series()).sum()
+        accuracy /= len(data)
+        logger.info(f"BinTreePredictor_id:{self.id} - accuracy:{round_wrp(accuracy, 4)}")
         return
 
 
