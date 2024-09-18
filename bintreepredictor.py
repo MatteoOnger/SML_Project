@@ -156,9 +156,9 @@ class BinTreePredictor():
 
 
     SPLIT_CRITERION = {
-        "entropy": lambda y, t: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / max(log2(t), 1),
-        "gini": lambda y, t: (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / (max(t-1, 1) / t),
-        "misclass": lambda y, t: 1 - y.value_counts(normalize=True).max(),
+        "entropy": lambda y: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / len(y.unique()),
+        "gini": lambda y: len(y.unique()) * (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / max((len(y.unique()) - 1), 1),
+        "misclass": lambda y: 1 - y.value_counts(normalize=True).max(),
     }
 
 
@@ -246,8 +246,8 @@ class BinTreePredictor():
                         if len(data_sx) == 0 or len(data_dx) == 0:
                             continue
 
-                        loss_sx = self.split_criterion(data_sx.get_labels_as_series(), len(data_sx))
-                        loss_dx = self.split_criterion(data_dx.get_labels_as_series(), len(data_dx))
+                        loss_sx = self.split_criterion(data_sx.get_labels_as_series())
+                        loss_dx = self.split_criterion(data_dx.get_labels_as_series())
                         loss = (loss_sx * len(data_sx) + loss_dx * len(data_dx)) / len(leaf.data)
 
                         if loss < best_loss:
@@ -267,10 +267,7 @@ class BinTreePredictor():
                 self.num_nodes += 2
                 self.height = max(self.height, best_leaf.sx.depth+1)
             else:
-                loss = 0
-                for leaf in self.leaves:
-                    loss += (self.split_criterion(leaf.data.get_labels_as_series(), len(leaf.data)) * len(leaf.data) / len(data))
-                logger.info(f"BinTreePredictor_id:{self.id} - no split found - final loss:{round_wrp(loss, 4)}")
+                logger.info(f"BinTreePredictor_id:{self.id} - no split found")
                 break
         return
 
