@@ -241,6 +241,8 @@ class BinTreePredictor():
                         thresholds = thresholds[1:-1]
                     else:
                         thresholds = leaf.data.schema.get_feature_domain(feat)
+                        if len(thresholds) == 1:
+                            continue
 
                     for threshold in thresholds:
                         leaf.set_test(feat, threshold)
