@@ -91,7 +91,7 @@ class BinNode():
     def set_data(self, data :DataSet) -> None:
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
-        labels = data.get_labels_as_series() 
+        labels = data.get_labels_as_series()
         self.data = data
         self.ispure = bool((labels == labels.iloc[0]).all())
         self.prediction = self.tree.prediction_criterion(labels) if self.tree is not None else None
@@ -150,6 +150,11 @@ class BinNode():
 class BinTreePredictor():
     """
     """
+    LOSS_FUNC = {
+        "zero-one": lambda y, p: (p != y).sum()
+    }
+
+
     PREDICTION_CRITERION = {
         "mode": lambda y: y.mode()[0],
     }
@@ -170,6 +175,7 @@ class BinTreePredictor():
 
     def __init__(
             self,
+            loss_func :Literal['zero-one'],
             prediction_criterion :Literal['mode'],
             split_criterion :Literal['entropy', 'gini', 'misclass'],
             stop_criterion :Literal['max_nodes', 'max_height'],
@@ -180,10 +186,12 @@ class BinTreePredictor():
         ) -> None:
         self.id = id
 
+        self.loss_func_name = loss_func
         self.prediction_criterion_name = prediction_criterion
         self.split_criterion_name = split_criterion
         self.stop_criterion_name = stop_criterion
 
+        self.loss_func = BinTreePredictor.LOSS_FUNC[loss_func]
         self.prediction_criterion = BinTreePredictor.PREDICTION_CRITERION[prediction_criterion]
         self.split_criterion = BinTreePredictor.SPLIT_CRITERION[split_criterion]
         self.stop_criterion =  BinTreePredictor.STOP_CRITERION[stop_criterion]
@@ -212,28 +220,27 @@ class BinTreePredictor():
 
         while not self.stop_criterion(self, self.stop_threshold):
             best_leaf = None
-            best_loss = float("inf")
+            best_info_gain = 0
             best_feat, best_threshold = None, None
 
             for leaf in self.leaves:
                 if leaf.ispure:
                     continue
 
+                info_parent = self.split_criterion(leaf.data.get_labels_as_series())
+
                 features = leaf.data.schema.features.to_numpy()
                 if self.max_features is not None:
                     np.random.shuffle(features)
                     features = features[:self.max_features]
-
-                for feat in features:
+                
+                for feat in features:                    
                     thresholds :np.ndarray
                     if self.max_thresholds is not None and leaf.data.schema.get_type(feat) == DataType.NUMERICAL:
                         _, thresholds = pd.cut(leaf.data.get_feature_as_series(feat), bins=self.max_thresholds + 1, retbins=True)
                         thresholds = thresholds[1:-1]
                     else:
                         thresholds = leaf.data.schema.get_feature_domain(feat)
-                    
-                    if len(thresholds) <= 1:
-                        continue 
 
                     for threshold in thresholds:
                         leaf.set_test(feat, threshold)
@@ -246,17 +253,17 @@ class BinTreePredictor():
                         if len(data_sx) == 0 or len(data_dx) == 0:
                             continue
 
-                        loss_sx = self.split_criterion(data_sx.get_labels_as_series())
-                        loss_dx = self.split_criterion(data_dx.get_labels_as_series())
-                        loss = (loss_sx * len(data_sx) + loss_dx * len(data_dx)) / len(leaf.data)
+                        info_sx = self.split_criterion(data_sx.get_labels_as_series())
+                        info_dx = self.split_criterion(data_dx.get_labels_as_series())
+                        info_gain = info_parent - (len(data_sx) * info_sx + len(data_dx) * info_dx) / len(leaf.data)
 
-                        if loss < best_loss:
+                        if info_gain > best_info_gain:
                             best_leaf = leaf
-                            best_loss = loss
+                            best_info_gain = info_gain
                             best_feat, best_threshold = feat, threshold
                         
-            if best_loss < float("inf"):
-                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)}) - loss:{round_wrp(best_loss, 4)}")
+            if best_info_gain > 0:
+                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)}) - info_gain:{round_wrp(best_info_gain, 4)}")
 
                 best_leaf.split_node(best_feat, best_threshold)
 
@@ -270,20 +277,21 @@ class BinTreePredictor():
                 logger.info(f"BinTreePredictor_id:{self.id} - no split found")
                 break
         
-        accuracy = 0
+        train_err = 0
         for leaf in self.leaves:
-            accuracy += (leaf.prediction == leaf.data.get_labels_as_series()).sum()
-        accuracy /= len(data)
-        logger.info(f"BinTreePredictor_id:{self.id} - accuracy:{round_wrp(accuracy, 4)}")
-        return
+            train_err += self.loss_func(leaf.data.get_labels_as_series(), leaf.prediction)
+        train_err /= len(data)
+
+        logger.info(f"BinTreePredictor_id:{self.id} - training_err:{round_wrp(train_err, 4)}")
+        return train_err
 
 
     def predict(self, data :DataSet) -> Tuple[DataSet, float|None]:
         if self.root is None:
             raise InvalidOperationError("This method cannot be called on an untrained predictor")
         predictions = self.root.predict(data)
-        accuracy = (predictions == data.get_labels_as_series()).sum() / len(data) if data.schema.has_labels() else None
-        return predictions, accuracy
+        test_err = self.loss_func(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
+        return predictions, test_err
 
 
     def print_tree(self) -> None:

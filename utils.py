@@ -6,7 +6,7 @@ T = TypeVar("T")
 
 def round_wrp(x :T, dig :int) -> T:
     """
-    Wrap the round function: it rounds ``x`` to the decimal place only if it is a number,
+    Wrap the ``round`` function: it rounds ``x`` to the decimal place only if it is a number,
     otherwise it returns ``x`` as is.
 
     Parameters
