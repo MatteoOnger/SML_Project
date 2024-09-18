@@ -161,7 +161,7 @@ class BinTreePredictor():
 
 
     SPLIT_CRITERION = {
-        "entropy": lambda y: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / len(y.unique()),
+        "entropy": lambda y: y.value_counts(normalize=True).apply(lambda x: -x * log2(x)).sum() / max(log2(len(y.unique())), 1),
         "gini": lambda y: len(y.unique()) * (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / max((len(y.unique()) - 1), 1),
         "misclass": lambda y: 1 - y.value_counts(normalize=True).max(),
     }
