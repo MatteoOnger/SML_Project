@@ -76,15 +76,21 @@ class BinNode():
     def predict(self, data :DataSet) -> pd.Series:
         if self.prediction is None and self.isleaf:
             raise InvalidOperationError("No prediction set fot this node")
+        if len(data) == 0:
+            raise ValueError("No rows in <data>")
         
         pred :pd.Series
         if self.isleaf:
             pred = pd.Series([self.prediction] * len(data), index=data.index)
         else:
             res = self.check_test(data)
-            sx_pred = self.sx.predict(data[res])
-            dx_pred = self.dx.predict(data[[not i for i in res]])
-            pred = pd.concat([sx_pred, dx_pred]).sort_index()
+
+            data_sx = data[res]
+            data_dx = data[[not i for i in res]]
+
+            pred_sx = self.sx.predict(data_sx) if len(data_sx) != 0 else None
+            pred_dx = self.dx.predict(data_dx) if len(data_dx) != 0 else None
+            pred = pd.concat([pred_sx, pred_dx]).sort_index()
         return pred
 
 
