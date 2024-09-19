@@ -336,6 +336,6 @@ class BinTreePredictor():
             "max_features": self.max_features,
             "max_thresholds": self.max_thresholds,
             "root": self.root.id,
-            "leaves": [leaf.id for leaf in self.leaves]
+            "num_leaves": len(self.leaves)
         }
         return "tree -> " + str(s)
