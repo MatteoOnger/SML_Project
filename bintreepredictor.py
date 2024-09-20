@@ -225,8 +225,8 @@ class BinTreePredictor():
         self.height = 1
 
         while not self.stop_criterion(self, self.stop_threshold):
+            best_score = 0
             best_leaf = None
-            best_info_gain = 0
             best_feat, best_threshold = None, None
 
             for leaf in self.leaves:
@@ -263,15 +263,19 @@ class BinTreePredictor():
 
                         info_sx = self.split_criterion(data_sx.get_labels_as_series())
                         info_dx = self.split_criterion(data_dx.get_labels_as_series())
-                        info_gain = info_parent - (len(data_sx) * info_sx + len(data_dx) * info_dx) / len(leaf.data)
+                        info_gain = (info_parent - (len(data_sx) * info_sx + len(data_dx) * info_dx) / len(leaf.data))
 
-                        if info_gain > best_info_gain:
+                        score = (len(leaf.data) / len(data)) * info_gain
+
+                        if score > best_score:
+                            best_score = score
                             best_leaf = leaf
-                            best_info_gain = info_gain
                             best_feat, best_threshold = feat, threshold
                         
-            if best_info_gain > 0:
-                logger.info(f"BinTreePredictor_id:{self.id} - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)}) - info_gain:{round_wrp(best_info_gain, 4)}")
+            if best_score > 0:
+                logger.info(f"BinTreePredictor_id:{self.id}" +
+                            f" - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)})" +
+                            f" - score:{round_wrp(best_score, 4)}")
 
                 best_leaf.split_node(best_feat, best_threshold)
 
