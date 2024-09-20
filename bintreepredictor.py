@@ -226,7 +226,7 @@ class BinTreePredictor():
 
         while not self.stop_criterion(self, self.stop_threshold):
             best_score = 0
-            best_leaf = None
+            best_leaf, pct_data = None, None
             best_feat, best_threshold = None, None
 
             for leaf in self.leaves:
@@ -269,13 +269,13 @@ class BinTreePredictor():
 
                         if score > best_score:
                             best_score = score
-                            best_leaf = leaf
+                            best_leaf, pct_data = leaf, len(leaf.data) / len(data)
                             best_feat, best_threshold = feat, threshold
                         
             if best_score > 0:
                 logger.info(f"BinTreePredictor_id:{self.id}" +
                             f" - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)})" +
-                            f" - score:{round_wrp(best_score, 4)}")
+                            f" - score:(info_gain:{round_wrp(best_score / pct_data, 4)}, pct_data:{round_wrp(pct_data, 4)})")
 
                 best_leaf.split_node(best_feat, best_threshold)
 
