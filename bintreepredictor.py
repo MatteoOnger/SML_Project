@@ -18,12 +18,26 @@ logger = logging.getLogger(__name__)
 
 class BinNode():
     """
+    This class implements a binary node. 
+    A binary node can only have zero or two children;
+    a test can be set to route the data points to the subsequent nodes until a leaf node is reached.
+    Only leaf nodes can be associated with data.
     """
     def __init__(self, parent :'BinNode|None'=None, tree :'BinTreePredictor|None'=None, id :int=0) -> None:
+        """
+        Parameters
+        ----------
+        parent : BinNode|None, optional
+            The parent node, i.e. the predecessor, by default None.
+        tree : BinTreePredictor|None, optional
+            The tree to which the node belongs, by default None.
+        id : int, optional
+            A unique id to identify the node in the tree, by default 0.
+        """
         self.id = id
 
-        self.isleaf = True
         self.tree = tree
+        self.isleaf = True
         self.depth = parent.depth + 1 if parent is not None else 0
 
         self.parent = parent
@@ -39,6 +53,30 @@ class BinNode():
 
 
     def check_test(self, data :DataSet) -> np.ndarray:
+        """
+        Checks which data points in ``data`` satisfy the test that has been set for this node.
+
+        Parameters
+        ----------
+        data : DataSet
+            The data points to process.
+
+        Returns
+        -------
+        :np.ndarray
+            An array of boolean values.
+
+        Raises
+        ------
+        InvalidOperationError
+            If a test has not been set.
+        ValueError
+            If the test cannot be applied to the given data set.
+        NotImplementedError
+            If the method is not implemented for the feature type under consideration.
+        TypeError
+            If there is a mismatch between the feature type and the threshold type.
+        """
         if self.test is None:
             raise InvalidOperationError("No test associated with this node")
         if self.test.feature not in data.schema.features:
@@ -63,17 +101,47 @@ class BinNode():
 
 
     def drop_data(self) -> None:
+        """
+        Drops the data associated with this node.
+
+        Notes
+        -----
+        - The field ``ispure`` is reset to ``None``, but the field ``prediction`` remains unchanged.
+        """
         self.data = None
         self.ispure = None
         return
 
 
     def drop_test(self) -> None:
+        """
+        Drops the test associated with this node.
+        """
         self.test = None
         return
 
 
     def predict(self, data :DataSet) -> pd.Series:
+        """
+        Predicts the label for the given data points.
+
+        Parameters
+        ----------
+        data : DataSet
+            The data points to process.
+
+        Returns
+        -------
+        :pd.Series
+            A series of labels, that are the predicted labels for the give data.
+
+        Raises
+        ------
+        InvalidOperationError
+            If the node is a leaf but no prediction has been set for it.
+        ValueError
+            If the given data set is empty.
+        """
         if self.prediction is None and self.isleaf:
             raise InvalidOperationError("No prediction set fot this node")
         if len(data) == 0:
@@ -95,6 +163,22 @@ class BinNode():
 
 
     def set_data(self, data :DataSet) -> None:
+        """
+        Assigns the provided data points with this node.
+        Based on them, the fields ``ispure`` and ``prediction`` will be computed,
+        in particular ``prediction`` will be computed using the criterion given by the tree
+        to which the node belongs, if available, otherwise it will be ``None``.
+
+        Parameters
+        ----------
+        data : DataSet
+            The data points to be associated with this node.
+
+        Raises
+        ------
+        InvalidOperationError
+            If the node is not a leaf.
+        """
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
         labels = data.get_labels_as_series()
@@ -105,15 +189,42 @@ class BinNode():
 
 
     def set_test(self, feat :int|str, threshold :Any) -> None:
+        """
+        Sets a test for this node.
+
+        Parameters
+        ----------
+        feat : int | str
+            The name of the feature to be tested.
+        threshold : Any
+            The threshold to be used.
+        """
         self.test = BinNode.TestCondition(feat, threshold)
         return
 
 
     def split_node(self, feat :int|str, threshold :Any) -> None:
+        """
+        Splits this node using the feature and threshold provided as an argument.
+        The data points associated will be split between the two children according to their feature values.
+        All the various fields will be updated accordingly.
+
+        Parameters
+        ----------
+        feat : int | str
+            The name of the feature to be tested.
+        threshold : Any
+            The threshold to be used.
+
+        Raises
+        ------
+        InvalidOperationError
+            If the node is not a leaf.
+        """
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT be split")
-        
         self.isleaf = False
+        
         self.set_test(feat, threshold)
         res = self.check_test(self.data)
 
@@ -148,6 +259,9 @@ class BinNode():
 
     @dataclass
     class TestCondition():
+        """
+        This inner data class contains the fields needed to define a test.
+        """
         feature :int|str
         threshold :Any
 
@@ -155,6 +269,7 @@ class BinNode():
 
 class BinTreePredictor():
     """
+    This class implements a binary decision tree.
     """
     LOSS_FUNC = {
         "zero-one": lambda y, p: (p != y).sum()
@@ -190,6 +305,27 @@ class BinTreePredictor():
             max_thresholds :int=None,
             id :int=0
         ) -> None:
+        """
+        Parameters
+        ----------
+        loss_func : Literal['zero-one']
+            Name of the loss function used to compute the training and the test error.
+        prediction_criterion : Literal['mode']
+            Name of the criterion used to assign a label to each leaf. 
+        split_criterion : Literal['entropy', 'gini', 'misclass']
+            Name of the criterion used to determine the best split.
+        stop_criterion : Literal['max_nodes', 'max_height']
+            Name of the criterion used to limit the growth of the decision tree.
+        stop_criterion_threshold : int
+            Threshold of the criterion used to limit the growth of the decision tree.
+        max_features : int, optional
+            Max number of features considered per leaf during the search for the best split, by default None.
+        max_thresholds : int, optional
+            Max number of thresholds considered per feature and leaf during the search for the best split, by default None.
+            This parameter is applied exclusively to numerical features.
+        id : int, optional
+            A unique id to identify the tree, by default 0.
+        """
         self.id = id
 
         self.loss_func_name = loss_func
@@ -215,6 +351,19 @@ class BinTreePredictor():
 
 
     def fit(self, data :DataSet) -> float:
+        """
+        Trains the decision tree using the data provided.
+
+        Parameters
+        ----------
+        data : DataSet
+            Data points used to train the predictor.
+
+        Returns
+        -------
+        :float
+            Training error.
+        """
         root = BinNode(parent=None, tree=self)
         root.set_data(data)
 
@@ -298,7 +447,27 @@ class BinTreePredictor():
         return train_err
 
 
-    def predict(self, data :DataSet) -> Tuple[DataSet, float|None]:
+    def predict(self, data :DataSet) -> Tuple[pd.Series, float|None]:
+        """
+        Predicts the labels of the given data points.
+
+        Parameters
+        ----------
+        data : DataSet
+            Data points to process.
+
+        Returns
+        -------
+        :Tuple[pd.Series, float|None]
+            A series containing the predicted label for each data point provided.
+            If ``data`` contains the expected labels, then the second entry of the tuple is the test error,
+            otherwise it is None.
+
+        Raises
+        ------
+        InvalidOperationError
+            If the decision tree is not trained.
+        """
         if self.root is None:
             raise InvalidOperationError("This method cannot be called on an untrained predictor")
         predictions = self.root.predict(data)
@@ -307,10 +476,10 @@ class BinTreePredictor():
 
 
     def print_tree(self) -> None:
+        """
+        Prints the entire tree in BFS order.
+        """
         print(f"\n---- TREE ----\n{self}\n")
-
-        if self.root is not None:
-            print(self.root)
 
         def rec(node :BinNode) -> None:
             if node.sx is not None:
@@ -324,7 +493,9 @@ class BinTreePredictor():
                 rec(node.dx)
                 return
         
-        rec(self.root)
+        if self.root is not None:
+            print(self.root)
+            rec(self.root)
         print("---- ---- ----")
         return
 
