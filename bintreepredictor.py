@@ -270,15 +270,23 @@ class BinNode():
 class BinTreePredictor():
     """
     This class implements a binary decision tree.
+    The implemented criteria are currently designed to solve classification problems,
+    but they can be easily extended to solve regression problems.
     """
     LOSS_FUNC = {
         "zero-one": lambda y, p: (p != y).sum()
     }
+    """
+    Loss functions to compute the training error and the test error.
+    """
 
 
     PREDICTION_CRITERION = {
         "mode": lambda y: y.mode()[0],
     }
+    """
+    Criteria to assign a label to each leaf.
+    """
 
 
     SPLIT_CRITERION = {
@@ -286,12 +294,18 @@ class BinTreePredictor():
         "gini": lambda y: len(y.unique()) * (1 - y.value_counts(normalize=True).apply(lambda x: x**2).sum()) / max((len(y.unique()) - 1), 1),
         "misclass": lambda y: 1 - y.value_counts(normalize=True).max(),
     }
+    """
+    Criteria for deciding which split is best.
+    """
 
 
     STOP_CRITERION = {
         "max_nodes": lambda tree, n: tree.num_nodes > n,
         "max_height": lambda tree, h: tree.height > h,
     }
+    """
+    Criteria to limit the growth of the tree.
+    """
 
 
     def __init__(
