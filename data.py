@@ -128,6 +128,11 @@ class DataSet():
             :np.ndarray
                 An array of all the possible label values,
                 so it contains unique values.
+
+            Raises
+            ------
+            ValueError
+                If the labels are not known for these data points.
             """
             return self.ds.get_labels_as_series().unique()
 
@@ -147,6 +152,11 @@ class DataSet():
             :np.ndarray
                 An array of all the possible values of the cosidered feature,
                 so it contains unique values.
+            
+            Raises
+            ------
+            ValueError
+                If ``col`` is not a column of the data set.
             """
             return self.ds.get_feature_as_series(col).unique()
 
@@ -164,7 +174,14 @@ class DataSet():
             -------
             :DataType
                 Type of the given feature.
+
+            Raises
+            ------
+            ValueError
+                If ``col`` is not a column of the data set.
             """
+            if col not in self.features:
+                raise ValueError(f"No feature named {col}")
             return DataType.CATEGORICAL if self.ds.data.loc[:, col].dtype ==  object else DataType.NUMERICAL
         
 

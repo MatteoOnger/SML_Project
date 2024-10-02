@@ -178,6 +178,8 @@ class BinNode():
         ------
         InvalidOperationError
             If the node is not a leaf.
+        ValueError
+            If the labels are not known for these data points.
         """
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
@@ -377,6 +379,11 @@ class BinTreePredictor():
         -------
         :float
             Training error.
+
+        Raises
+        ------
+        ValueError
+            If the labels are not known for these data points.
         """
         root = BinNode(parent=None, tree=self)
         root.set_data(data)
