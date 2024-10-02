@@ -389,7 +389,7 @@ class BinTreePredictor():
         root.set_data(data)
 
         self.root = root
-        self.leaves.append(root)
+        self.leaves = [root]
 
         self.num_nodes = 1
         self.height = 1
