@@ -443,7 +443,7 @@ class BinTreePredictor():
                             best_feat, best_threshold = feat, threshold
                         
             if best_score > 0:
-                logger.info(f"BinTreePredictor_id:{self.id}" +
+                logger.debug(f"BinTreePredictor_id:{self.id}" +
                             f" - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)})" +
                             f" - score:(info_gain:{round_wrp(best_score / pct_data, 4)}, pct_data:{round_wrp(pct_data, 4)})")
 
@@ -456,7 +456,7 @@ class BinTreePredictor():
                 self.num_nodes += 2
                 self.height = max(self.height, best_leaf.sx.depth+1)
             else:
-                logger.info(f"BinTreePredictor_id:{self.id} - no split found")
+                logger.warning(f"BinTreePredictor_id:{self.id} - no split found")
                 break
         
         train_err = 0
