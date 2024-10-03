@@ -532,7 +532,7 @@ class BinTreePredictor():
             "height": self.height,
             "max_features": self.max_features,
             "max_thresholds": self.max_thresholds,
-            "root": self.root.id,
+            "root": self.root.id if self.root is not None else None,
             "num_leaves": len(self.leaves)
         }
         return "tree -> " + str(s)
