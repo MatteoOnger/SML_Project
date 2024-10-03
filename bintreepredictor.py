@@ -493,7 +493,7 @@ class BinTreePredictor():
             raise InvalidOperationError("This method cannot be called on an untrained predictor")
         predictions = self.root.predict(data)
         test_err = self.loss_func(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
-        logger.info(f"BinTreePredictor_id:{self.id} - training_err:{round_wrp(test_err, 4)}")
+        logger.info(f"BinTreePredictor_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
         return predictions, test_err
 
 
