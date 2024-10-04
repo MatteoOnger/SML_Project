@@ -1,6 +1,7 @@
 import logging
 import pandas as pd
 
+from math import sqrt
 from typing import Literal, Tuple
 
 from bintreepredictor import BinTreePredictor
@@ -22,8 +23,8 @@ class BinRandomForest():
             split_criterion :Literal['entropy', 'gini', 'misclass'],
             stop_criterion :Literal['max_nodes', 'max_height'],
             stop_criterion_threshold :int,
-            max_features :int=None,
-            max_thresholds :int=None,
+            max_features :int|Literal['sqrt']|None=None,
+            max_thresholds :int|None=None,
             id :int=0
         ) -> None:
         self.id = id
@@ -39,6 +40,14 @@ class BinRandomForest():
         self.max_features = max_features
         self.max_thresholds = max_thresholds
  
+        self.trees :list[BinTreePredictor] = list()
+        return
+
+
+    def fit(self, data :DataSet) -> float:
+        if self.max_features == "sqrt":
+            self.max_features = sqrt(data.schema.num_features)
+
         self.trees = [
             BinTreePredictor(
                 self.loss_func_name,
@@ -50,13 +59,11 @@ class BinRandomForest():
                 self.max_thresholds,
                 i
             )
-            for i in range(0, num_trees)
+            for i in range(0, self.num_trees)
         ]
+
+
         return
-
-
-    def fit(self, data :DataSet) -> float:
-        pass
 
 
     def predict(self, data :DataSet) -> Tuple[pd.Series, float|None]:

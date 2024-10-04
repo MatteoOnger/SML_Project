@@ -55,7 +55,7 @@ class DataSet():
 
         Returns
         -------
-        DataSet
+        :DataSet
             Returns a data set with the specified index labels removed.
         """
         df = self.data.drop(index=index, inplace=False)
@@ -105,6 +105,29 @@ class DataSet():
         return self.data[self.label_col]
 
 
+    def insert(self, loc :int, column :int|str, value :pd.Series) -> 'DataSet':
+        """
+        Returns a copy of self to which the column passed as parameter was added.
+
+        Parameters
+        ----------
+        loc : int
+            Insertion index. Must verify 0 <= loc <= len(columns).
+        column : int | str
+            Label of the inserted column.
+        value : pd.Series
+            Content of the inserted column.
+
+        Returns
+        -------
+        :DataSet
+            The new data set.
+        """
+        df = self.data.copy(deep=True)
+        df.insert(loc, column, value)
+        return DataSet(df, self.label_col)
+
+
     def sample(self, n :int|None=None, frac :float|None=None, replace :bool=True, seed :int=1) -> 'DataSet':
         """
         Returns a random sample.
@@ -122,7 +145,7 @@ class DataSet():
 
         Returns
         -------
-        DataSet
+        :DataSet
             A new object of same type containing ``n`` items randomly sampled from the caller object.
         """
         df = self.data.sample(n=n, frac=frac, replace=replace, random_state=seed)
