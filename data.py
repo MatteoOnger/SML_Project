@@ -128,7 +128,7 @@ class DataSet():
         return DataSet(df, self.label_col)
 
 
-    def sample(self, n :int|None=None, frac :float|None=None, replace :bool=True, seed :int=1) -> 'DataSet':
+    def sample(self, n :int|None=None, frac :float|None=None, replace :bool=False, seed :int=1) -> 'DataSet':
         """
         Returns a random sample.
 
@@ -139,7 +139,7 @@ class DataSet():
         frac : float | None, optional
             Fraction of items to return, by default None. Cannot be used with ``n``.
         replace : bool, optional
-            Allow or disallow sampling of the same row more than once, by default True.
+            Allow or disallow sampling of the same row more than once, by default False.
         seed : int | None, optional
             Seed for random number generator., by default 1.
 
