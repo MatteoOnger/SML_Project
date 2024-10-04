@@ -317,8 +317,8 @@ class BinTreePredictor():
             split_criterion :Literal['entropy', 'gini', 'misclass'],
             stop_criterion :Literal['max_nodes', 'max_height'],
             stop_criterion_threshold :int,
-            max_features :int=None,
-            max_thresholds :int=None,
+            max_features :int|None=None,
+            max_thresholds :int|None=None,
             id :int=0
         ) -> None:
         """
@@ -334,9 +334,9 @@ class BinTreePredictor():
             Name of the criterion used to limit the growth of the decision tree.
         stop_criterion_threshold : int
             Threshold of the criterion used to limit the growth of the decision tree.
-        max_features : int, optional
+        max_features : int | None, optional
             Max number of features considered per leaf during the search for the best split, by default None.
-        max_thresholds : int, optional
+        max_thresholds : int | None, optional
             Max number of thresholds considered per feature and leaf during the search for the best split, by default None.
             This parameter is applied exclusively to numerical features.
         id : int, optional
