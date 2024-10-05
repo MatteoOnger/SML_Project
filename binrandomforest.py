@@ -1,7 +1,8 @@
 import logging
 import pandas as pd
 
-from math import sqrt
+from math import ceil, sqrt
+from random import randint
 from typing import Literal, Tuple
 
 from bintreepredictor import BinTreePredictor
@@ -9,7 +10,6 @@ from data import DataSet
 
 
 logger = logging.getLogger(__name__)
-
 
 
 class BinRandomForest():
@@ -46,7 +46,7 @@ class BinRandomForest():
 
     def fit(self, data :DataSet) -> float:
         if self.max_features == "sqrt":
-            self.max_features = sqrt(data.schema.num_features)
+            self.max_features = ceil(sqrt(data.schema.num_features))
 
         self.trees = [
             BinTreePredictor(
@@ -62,12 +62,25 @@ class BinRandomForest():
             for i in range(0, self.num_trees)
         ]
 
+        for tree in self.trees:
+            ds = data.sample(frac=1, replace=True, seed=randint(1, 2**30))
+            tree.fit(ds)
 
-        return
+        _, train_err = self.predict(data)
+        return train_err
 
 
     def predict(self, data :DataSet) -> Tuple[pd.Series, float|None]:
-        pass
+        predictions = pd.DataFrame(index=data.index)
+        l = BinTreePredictor.LOSS_FUNC[self.loss_func_name]
+
+        for i, tree in enumerate(self.trees):
+            tree_pred, _ = tree.predict(data)
+            predictions.insert(i, i, tree_pred)
+
+        predictions = predictions.mode(axis="columns").iloc[:, 0]
+        test_err = l(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
+        return predictions, test_err
 
 
     def __str__(self) -> str:
