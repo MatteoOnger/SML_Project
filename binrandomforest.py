@@ -7,6 +7,7 @@ from typing import Literal, Tuple
 
 from bintreepredictor import BinTreePredictor
 from data import DataSet
+from utils import round_wrp
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ class BinRandomForest():
             tree.fit(ds)
 
         _, train_err = self.predict(data)
+        logger.info(f"BinRandomForest_id:{self.id} - training_err:{round_wrp(train_err, 4)}")
         return train_err
 
 
@@ -80,6 +82,8 @@ class BinRandomForest():
 
         predictions = predictions.mode(axis="columns").iloc[:, 0]
         test_err = l(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
+        
+        logger.info(f"BinRandomForest_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
         return predictions, test_err
 
 
