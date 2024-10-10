@@ -111,7 +111,7 @@ class BinRandomForest():
         ]
 
         for tree in self.trees:
-            ds = data.sample(frac=1, replace=True, seed=randint(1, 2**30))
+            ds = data.sample(frac=1, replace=True, ignore_index=True, seed=randint(1, 2**30))
             tree.fit(ds)
 
         _, train_err = self.predict(data)

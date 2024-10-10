@@ -128,7 +128,7 @@ class DataSet():
         return DataSet(df, self.label_col)
 
 
-    def sample(self, n :int|None=None, frac :float|None=None, replace :bool=False, seed :int=1) -> 'DataSet':
+    def sample(self, n :int|None=None, frac :float|None=None, replace :bool=False, ignore_index :bool=False, seed :int=1) -> 'DataSet':
         """
         Returns a random sample.
 
@@ -140,6 +140,8 @@ class DataSet():
             Fraction of items to return, by default None. Cannot be used with ``n``.
         replace : bool, optional
             Allow or disallow sampling of the same row more than once, by default False.
+        ignore_index : bool, optional
+            If True, the resulting index will be labeled 0, 1, …, n - 1.
         seed : int | None, optional
             Seed for random number generator., by default 1.
 
@@ -148,7 +150,7 @@ class DataSet():
         :DataSet
             A new object of same type containing ``n`` items randomly sampled from the caller object.
         """
-        df = self.data.sample(n=n, frac=frac, replace=replace, random_state=seed)
+        df = self.data.sample(n=n, frac=frac, replace=replace, ignore_index=ignore_index, random_state=seed)
         return DataSet(df, self.label_col)
 
 
