@@ -114,12 +114,12 @@ class BinRandomForest():
             ds = data.sample(frac=1, replace=True, ignore_index=True, seed=randint(1, 2**30))
             tree.fit(ds)
 
-        _, train_err = self.predict(data, enable_log=False)
+        _, train_err = self.predict(data, _enable_log=False)
         logger.info(f"BinRandomForest_id:{self.id} - training_err:{round_wrp(train_err, 4)}")
         return train_err
 
 
-    def predict(self, data :DataSet, enable_log :bool=True) -> Tuple[pd.Series, float|None]:
+    def predict(self, data :DataSet, _enable_log :bool=True) -> Tuple[pd.Series, float|None]:
         """
         Predicts the labels of the given data points.
 
@@ -153,7 +153,7 @@ class BinRandomForest():
         predictions = predictions.mode(axis="columns").iloc[:, 0]
         test_err = loss(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
         
-        if enable_log:
+        if _enable_log:
             logger.info(f"BinRandomForest_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
         return predictions, test_err
 
