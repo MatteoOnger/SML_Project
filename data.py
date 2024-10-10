@@ -44,6 +44,24 @@ class DataSet():
         return
 
 
+    def drop(self, index :list[int|str]) -> 'DataSet':
+        """
+        Drops specified labels from rows.
+
+        Parameters
+        ----------
+        index : list[int]
+            Index labels to drop.
+
+        Returns
+        -------
+        :DataSet
+            Returns a data set with the specified index labels removed.
+        """
+        df = self.data.drop(index=index, inplace=False)
+        return DataSet(df, self.label_col)
+
+
     def get_feature_as_series(self, col :int|str) -> pd.Series:
         """
         Returns the value of the feature for each data point. 
@@ -87,6 +105,53 @@ class DataSet():
         return self.data[self.label_col]
 
 
+    def insert(self, loc :int, column :int|str, value :pd.Series) -> 'DataSet':
+        """
+        Returns a copy of self to which the column passed as parameter was added.
+
+        Parameters
+        ----------
+        loc : int
+            Insertion index. Must verify 0 <= loc <= len(columns).
+        column : int | str
+            Label of the inserted column.
+        value : pd.Series
+            Content of the inserted column.
+
+        Returns
+        -------
+        :DataSet
+            The new data set.
+        """
+        df = self.data.copy(deep=True)
+        df.insert(loc, column, value)
+        return DataSet(df, self.label_col)
+
+
+    def sample(self, n :int|None=None, frac :float|None=None, replace :bool=False, seed :int=1) -> 'DataSet':
+        """
+        Returns a random sample.
+
+        Parameters
+        ----------
+        n : int | None, optional
+            Number of items to return, by default None. Cannot be used with ``frac``.
+        frac : float | None, optional
+            Fraction of items to return, by default None. Cannot be used with ``n``.
+        replace : bool, optional
+            Allow or disallow sampling of the same row more than once, by default False.
+        seed : int | None, optional
+            Seed for random number generator., by default 1.
+
+        Returns
+        -------
+        :DataSet
+            A new object of same type containing ``n`` items randomly sampled from the caller object.
+        """
+        df = self.data.sample(n=n, frac=frac, replace=replace, random_state=seed)
+        return DataSet(df, self.label_col)
+
+
     def __getitem__(self, key :int|slice) -> 'DataSet':
         data = self.data[key]
         label_col = self.label_col if self.label_col in data.columns else None
@@ -128,6 +193,11 @@ class DataSet():
             :np.ndarray
                 An array of all the possible label values,
                 so it contains unique values.
+
+            Raises
+            ------
+            ValueError
+                If the labels are not known for these data points.
             """
             return self.ds.get_labels_as_series().unique()
 
@@ -147,6 +217,11 @@ class DataSet():
             :np.ndarray
                 An array of all the possible values of the cosidered feature,
                 so it contains unique values.
+            
+            Raises
+            ------
+            ValueError
+                If ``col`` is not a column of the data set.
             """
             return self.ds.get_feature_as_series(col).unique()
 
@@ -164,7 +239,14 @@ class DataSet():
             -------
             :DataType
                 Type of the given feature.
+
+            Raises
+            ------
+            ValueError
+                If ``col`` is not a column of the data set.
             """
+            if col not in self.features:
+                raise ValueError(f"No feature named {col}")
             return DataType.CATEGORICAL if self.ds.data.loc[:, col].dtype ==  object else DataType.NUMERICAL
         
 

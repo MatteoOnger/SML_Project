@@ -178,6 +178,8 @@ class BinNode():
         ------
         InvalidOperationError
             If the node is not a leaf.
+        ValueError
+            If the labels are not known for these data points.
         """
         if not self.isleaf:
             raise InvalidOperationError("Inner nodes can NOT contain datapoints")
@@ -315,8 +317,8 @@ class BinTreePredictor():
             split_criterion :Literal['entropy', 'gini', 'misclass'],
             stop_criterion :Literal['max_nodes', 'max_height'],
             stop_criterion_threshold :int,
-            max_features :int=None,
-            max_thresholds :int=None,
+            max_features :int|None=None,
+            max_thresholds :int|None=None,
             id :int=0
         ) -> None:
         """
@@ -332,9 +334,9 @@ class BinTreePredictor():
             Name of the criterion used to limit the growth of the decision tree.
         stop_criterion_threshold : int
             Threshold of the criterion used to limit the growth of the decision tree.
-        max_features : int, optional
+        max_features : int | None, optional
             Max number of features considered per leaf during the search for the best split, by default None.
-        max_thresholds : int, optional
+        max_thresholds : int | None, optional
             Max number of thresholds considered per feature and leaf during the search for the best split, by default None.
             This parameter is applied exclusively to numerical features.
         id : int, optional
@@ -377,12 +379,17 @@ class BinTreePredictor():
         -------
         :float
             Training error.
+
+        Raises
+        ------
+        ValueError
+            If the labels are not known for these data points.
         """
         root = BinNode(parent=None, tree=self)
         root.set_data(data)
 
         self.root = root
-        self.leaves.append(root)
+        self.leaves = [root]
 
         self.num_nodes = 1
         self.height = 1
@@ -436,7 +443,7 @@ class BinTreePredictor():
                             best_feat, best_threshold = feat, threshold
                         
             if best_score > 0:
-                logger.info(f"BinTreePredictor_id:{self.id}" +
+                logger.debug(f"BinTreePredictor_id:{self.id}" +
                             f" - split:(leaf:{best_leaf.id}, feat:{best_feat}, threshold:{round_wrp(best_threshold, 4)})" +
                             f" - score:(info_gain:{round_wrp(best_score / pct_data, 4)}, pct_data:{round_wrp(pct_data, 4)})")
 
@@ -449,7 +456,7 @@ class BinTreePredictor():
                 self.num_nodes += 2
                 self.height = max(self.height, best_leaf.sx.depth+1)
             else:
-                logger.info(f"BinTreePredictor_id:{self.id} - no split found")
+                logger.warning(f"BinTreePredictor_id:{self.id} - no split found")
                 break
         
         train_err = 0
@@ -486,6 +493,7 @@ class BinTreePredictor():
             raise InvalidOperationError("This method cannot be called on an untrained predictor")
         predictions = self.root.predict(data)
         test_err = self.loss_func(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
+        logger.info(f"BinTreePredictor_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
         return predictions, test_err
 
 
@@ -524,7 +532,7 @@ class BinTreePredictor():
             "height": self.height,
             "max_features": self.max_features,
             "max_thresholds": self.max_thresholds,
-            "root": self.root.id,
+            "root": self.root.id if self.root is not None else None,
             "num_leaves": len(self.leaves)
         }
         return "tree -> " + str(s)
