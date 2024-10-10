@@ -158,8 +158,8 @@ class BinNode():
 
             pred_sx = self.sx.predict(data_sx) if len(data_sx) != 0 else None
             pred_dx = self.dx.predict(data_dx) if len(data_dx) != 0 else None
-            pred = pd.concat([pred_sx, pred_dx]).sort_index()
-        return pred
+            pred = pd.concat([pred_sx, pred_dx])
+        return pred.sort_index()
 
 
     def set_data(self, data :DataSet) -> None:
@@ -492,7 +492,7 @@ class BinTreePredictor():
         if self.root is None:
             raise InvalidOperationError("This method cannot be called on an untrained predictor")
         predictions = self.root.predict(data)
-        test_err = self.loss_func(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
+        test_err = self.loss_func(data.get_labels_as_series().sort_index(), predictions) / len(data) if data.schema.has_labels() else None
         logger.info(f"BinTreePredictor_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
         return predictions, test_err
 

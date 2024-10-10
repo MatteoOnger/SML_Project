@@ -151,7 +151,7 @@ class BinRandomForest():
             predictions.insert(i, i, tree_pred)
 
         predictions = predictions.mode(axis="columns").iloc[:, 0]
-        test_err = loss(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
+        test_err = loss(data.get_labels_as_series().sort_index(), predictions) / len(data) if data.schema.has_labels() else None
         
         logger.info(f"BinRandomForest_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
         return predictions, test_err
