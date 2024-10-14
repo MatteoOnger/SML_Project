@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class BinRandomForest():
     """
     This class implements a random forest based on
-    the binary decision trees implemented by the ``bintreepredictor.BinTreePredictor`` class.
+    binary decision trees implemented by the ``bintreepredictor.BinTreePredictor`` class.
     """
     def __init__(
             self,
@@ -37,7 +37,7 @@ class BinRandomForest():
         Parameters
         ----------
         num_trees : int
-            _description_
+            Number of trees that make up the forest.
         loss_func : Literal['zero-one']
             Name of the loss function used to compute the training and the test error.
         prediction_criterion : Literal['mode']
@@ -51,7 +51,7 @@ class BinRandomForest():
         max_features : int | Literal['sqrt'] | None, optional
             Max number of features considered per leaf during the search for the best split, by default None.
             If it is set to 'sqrt', the square root of the number of features in the training set 
-            will be calculated automatically and used in training.
+            will be calculated automatically and used during the training phase.
         max_thresholds : int | None, optional
             Max number of thresholds considered per feature and leaf during the search for the best split, by default None.
             This parameter is applied exclusively to numerical features.
@@ -111,15 +111,15 @@ class BinRandomForest():
         ]
 
         for tree in self.trees:
-            ds = data.sample(frac=1, replace=True, seed=randint(1, 2**30))
+            ds = data.sample(frac=1, replace=True, ignore_index=True, seed=randint(1, 2**30))
             tree.fit(ds)
 
-        _, train_err = self.predict(data)
+        _, train_err = self.predict(data, _enable_log=False)
         logger.info(f"BinRandomForest_id:{self.id} - training_err:{round_wrp(train_err, 4)}")
         return train_err
 
 
-    def predict(self, data :DataSet) -> Tuple[pd.Series, float|None]:
+    def predict(self, data :DataSet, _enable_log :bool=True) -> Tuple[pd.Series, float|None]:
         """
         Predicts the labels of the given data points.
 
@@ -153,7 +153,8 @@ class BinRandomForest():
         predictions = predictions.mode(axis="columns").iloc[:, 0]
         test_err = loss(data.get_labels_as_series(), predictions) / len(data) if data.schema.has_labels() else None
         
-        logger.info(f"BinRandomForest_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
+        if _enable_log:
+            logger.info(f"BinRandomForest_id:{self.id} - test_err:{round_wrp(test_err, 4)}")
         return predictions, test_err
 
 

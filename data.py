@@ -16,7 +16,7 @@ class DataType(Enum):
 
 class DataSet():
     """
-    This class implements a data set: each column represents a feature, or a label, while each row a data point.
+    This class implements a dataset: each column represents a feature, or a label, while each row a data point.
     It wraps a pandas dataframe and provides some specific methods to simplify its use as training or test set.
     """
     def __init__(self, data :pd.DataFrame, label_col :str|None=None) -> None:
@@ -24,7 +24,7 @@ class DataSet():
         Parameters
         ----------
         data : pd.DataFrame
-            The data points to process: know features plus, possibly, the expected label.
+            The data points to process: known features plus, possibly, the expected label.
         label_col : str | None, optional
             The name of the column of ``data`` that contains the labels, by default None.
 
@@ -46,7 +46,7 @@ class DataSet():
 
     def drop(self, index :list[int|str]) -> 'DataSet':
         """
-        Drops specified labels from rows.
+        Drops rows.
 
         Parameters
         ----------
@@ -56,7 +56,7 @@ class DataSet():
         Returns
         -------
         :DataSet
-            Returns a data set with the specified index labels removed.
+            Returns a new dataset with the specified index labels removed.
         """
         df = self.data.drop(index=index, inplace=False)
         return DataSet(df, self.label_col)
@@ -64,7 +64,7 @@ class DataSet():
 
     def get_feature_as_series(self, col :int|str) -> pd.Series:
         """
-        Returns the value of the feature for each data point. 
+        Returns the feature value for each data point. 
 
         Parameters
         ----------
@@ -128,7 +128,7 @@ class DataSet():
         return DataSet(df, self.label_col)
 
 
-    def sample(self, n :int|None=None, frac :float|None=None, replace :bool=False, seed :int=1) -> 'DataSet':
+    def sample(self, n :int|None=None, frac :float|None=None, replace :bool=False, ignore_index :bool=False, seed :int=1) -> 'DataSet':
         """
         Returns a random sample.
 
@@ -140,15 +140,17 @@ class DataSet():
             Fraction of items to return, by default None. Cannot be used with ``n``.
         replace : bool, optional
             Allow or disallow sampling of the same row more than once, by default False.
+        ignore_index : bool, optional
+            If True, the resulting index will be labeled 0, 1, …, n - 1.
         seed : int | None, optional
-            Seed for random number generator., by default 1.
+            Seed for random number generator, by default 1.
 
         Returns
         -------
         :DataSet
             A new object of same type containing ``n`` items randomly sampled from the caller object.
         """
-        df = self.data.sample(n=n, frac=frac, replace=replace, random_state=seed)
+        df = self.data.sample(n=n, frac=frac, replace=replace, ignore_index=ignore_index, random_state=seed)
         return DataSet(df, self.label_col)
 
 
@@ -168,7 +170,7 @@ class DataSet():
 
     class Schema():
         """
-        This inner class provides some useful methods for obtaining information regarding the structure of a data set.
+        This inner class provides some useful methods for obtaining information regarding the structure of a dataset.
         """
         def __init__(self, ds :'DataSet') -> None:
             """
@@ -184,28 +186,9 @@ class DataSet():
             return
 
 
-        def get_label_domain(self) -> np.ndarray:
-            """
-            Returns the domain of the label.
-
-            Returns
-            -------
-            :np.ndarray
-                An array of all the possible label values,
-                so it contains unique values.
-
-            Raises
-            ------
-            ValueError
-                If the labels are not known for these data points.
-            """
-            return self.ds.get_labels_as_series().unique()
-
-
         def get_feature_domain(self, col :int|str) -> np.ndarray:
             """
             Returns the domain of the feature.
-
 
             Parameters
             ----------
@@ -224,6 +207,24 @@ class DataSet():
                 If ``col`` is not a column of the data set.
             """
             return self.ds.get_feature_as_series(col).unique()
+
+
+        def get_label_domain(self) -> np.ndarray:
+            """
+            Returns the domain of the label.
+
+            Returns
+            -------
+            :np.ndarray
+                An array of all the possible label values,
+                so it contains unique values.
+
+            Raises
+            ------
+            ValueError
+                If the labels are not known for these data points.
+            """
+            return self.ds.get_labels_as_series().unique()
 
 
         def get_type(self, col :int|str) -> DataType:
