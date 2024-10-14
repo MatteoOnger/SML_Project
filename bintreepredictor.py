@@ -27,9 +27,9 @@ class BinNode():
         """
         Parameters
         ----------
-        parent : BinNode|None, optional
+        parent : BinNode | None, optional
             The parent node, i.e. the predecessor, by default None.
-        tree : BinTreePredictor|None, optional
+        tree : BinTreePredictor | None, optional
             The tree to which the node belongs, by default None.
         id : int, optional
             A unique id to identify the node in the tree, by default 0.
@@ -70,12 +70,12 @@ class BinNode():
         ------
         InvalidOperationError
             If a test has not been set.
-        ValueError
-            If the test cannot be applied to the given data set.
         NotImplementedError
             If the method is not implemented for the feature type under consideration.
         TypeError
             If there is a mismatch between the feature type and the threshold type.
+        ValueError
+            If the test cannot be applied to the given data set.
         """
         if self.test is None:
             raise InvalidOperationError("No test associated with this node")
@@ -164,7 +164,7 @@ class BinNode():
 
     def set_data(self, data :DataSet) -> None:
         """
-        Assigns the provided data points with this node.
+        Assigns the provided data points to this node.
         Based on them, the fields ``ispure`` and ``prediction`` will be computed,
         in particular ``prediction`` will be computed using the criterion given by the tree
         to which the node belongs, if available, otherwise it will be ``None``.
